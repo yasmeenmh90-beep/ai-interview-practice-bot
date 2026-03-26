@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Interview Practice Bot</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      width: 100%;
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+      border-bottom: 1px solid #2d4a6e;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header .logo { font-size: 26px; }
+    header h1 { font-size: 20px; font-weight: 700; color: #60a5fa; }
+    header p  { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Category selector */
+    .category-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .cat-btn {
+      padding: 7px 16px;
+      border-radius: 20px;
+      border: 1px solid #2d4a6e;
+      background: #1a2a3a;
+      color: #94a3b8;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .cat-btn.active, .cat-btn:hover {
+      background: #1d4ed8;
+      border-color: #3b82f6;
+      color: #fff;
+    }
+
+    /* Chat window */
+    .chat-window {
+      background: #1a1f2e;
+      border: 1px solid #2d3748;
+      border-radius: 16px;
+      padding: 20px;
+      min-height: 360px;
+      max-height: 480px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .msg {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      animation: fadeIn .3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .bot-avatar  { background: #1d4ed8; }
+    .user-avatar { background: #065f46; }
+    .bubble {
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 90%;
+    }
+    .bot-bubble  { background: #1e293b; border: 1px solid #2d3748; color: #e2e8f0; }
+    .user-bubble { background: #1e3a5f; border: 1px solid #2d4a6e; color: #e2e8f0; }
+    .hint-box {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #1a2a1a;
+      border-left: 3px solid #10b981;
+      border-radius: 0 8px 8px 0;
+      font-size: 12px;
+      color: #6ee7b7;
+      display: none;
+    }
+    .hint-box.show { display: block; }
+    .feedback-box {
+      margin-top: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .score-bar { margin-top: 8px; }
+    .score-label { font-size: 12px; color: #94a3b8; margin-bottom: 4px; }
+    .bar-track { background: #2d3748; border-radius: 4px; height: 6px; overflow: hidden; }
+    .bar-fill  { height: 100%; border-radius: 4px; background: #3b82f6; transition: width .6s; }
+
+    /* Input area */
+    .input-area {
+      background: #1a1f2e;
+      border: 1px solid #2d3748;
+      border-radius: 16px;
+      padding: 16px;
+    }
+    textarea {
+      width: 100%;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      color: #e2e8f0;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 12px 14px;
+      resize: vertical;
+      min-height: 110px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    textarea:focus { border-color: #3b82f6; }
+    .btn-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .btn {
+      padding: 9px 20px;
+      border-radius: 8px;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all .2s;
+    }
+    .btn-primary { background: #1d4ed8; color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-secondary { background: #1e293b; color: #94a3b8; border: 1px solid #2d3748; }
+    .btn-secondary:hover { background: #2d3748; color: #e2e8f0; }
+    .btn-hint { background: #064e3b; color: #6ee7b7; border: 1px solid #065f46; }
+    .btn-hint:hover { background: #065f46; }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .stat-card {
+      flex: 1;
+      min-width: 120px;
+      background: #1a1f2e;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+    }
+    .stat-num  { font-size: 26px; font-weight: 700; color: #60a5fa; }
+    .stat-label { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+    .empty-state {
+      text-align: center;
+      color: #475569;
+      font-size: 14px;
+      margin: auto;
+      padding: 40px 0;
+    }
+    .empty-state .big { font-size: 40px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🤖</div>
+  <div>
+    <h1>AI Interview Practice Bot</h1>
+    <p>Practise AI/ML, Data Science &amp; Python interview questions</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-num" id="q-count">0</div>
+      <div class="stat-label">Questions answered</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="avg-score">—</div>
+      <div class="stat-label">Avg score</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="streak">0</div>
+      <div class="stat-label">Current streak 🔥</div>
+    </div>
+  </div>
+
+  <!-- Category buttons -->
+  <div class="category-bar">
+    <button class="cat-btn active" data-cat="ai_ml">AI / ML</button>
+    <button class="cat-btn" data-cat="data_science">Data Science</button>
+    <button class="cat-btn" data-cat="python">Python</button>
+    <button class="cat-btn" data-cat="behavioural">Behavioural</button>
+  </div>
+
+  <!-- Chat window -->
+  <div class="chat-window" id="chat">
+    <div class="empty-state">
+      <div class="big">💬</div>
+      Click <strong>New Question</strong> to start practising!
+    </div>
+  </div>
+
+  <!-- Input area -->
+  <div class="input-area">
+    <textarea id="answer-input" placeholder="Type your answer here…" disabled></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="newQuestion()">⚡ New Question</button>
+      <button class="btn btn-primary" onclick="submitAnswer()" id="submit-btn" disabled>✅ Submit Answer</button>
+      <button class="btn btn-hint" onclick="showHint()" id="hint-btn" disabled>💡 Hint</button>
+      <button class="btn btn-secondary" onclick="clearChat()">🗑 Clear</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let currentCategory = "ai_ml";
+  let currentHint = "";
+  let questionsAnswered = 0;
+  let totalScore = 0;
+  let streak = 0;
+
+  // Category selection
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentCategory = btn.dataset.cat;
+    });
+  });
+
+  function addMessage(text, role, extra) {
+    const chat = document.getElementById('chat');
+    const emptyState = chat.querySelector('.empty-state');
+    if (emptyState) emptyState.remove();
+
+    const msg = document.createElement('div');
+    msg.className = 'msg';
+    const isBot = role === 'bot';
+    msg.innerHTML = `
+      <div class="avatar ${isBot ? 'bot-avatar' : 'user-avatar'}">${isBot ? '🤖' : '👩'}</div>
+      <div>
+        <div class="bubble ${isBot ? 'bot-bubble' : 'user-bubble'}">${text}
+          ${extra ? `<div class="hint-box" id="hint-box">${extra}</div>` : ''}
+        </div>
+      </div>`;
+    chat.appendChild(msg);
+    chat.scrollTop = chat.scrollHeight;
+    return msg;
+  }
+
+  function addFeedback(feedback, score, tip) {
+    const chat = document.getElementById('chat');
+    const msg = document.createElement('div');
+    msg.className = 'msg';
+    const color = score >= 7 ? '#10b981' : score >= 4 ? '#f59e0b' : '#ef4444';
+    msg.innerHTML = `
+      <div class="avatar bot-avatar">🤖</div>
+      <div>
+        <div class="bubble bot-bubble">
+          <div class="feedback-box" style="background:${color}18; border-left: 3px solid ${color}; border-radius:0 8px 8px 0; padding:10px 14px;">
+            <strong>Feedback:</strong> ${feedback}
+          </div>
+          <div class="score-bar">
+            <div class="score-label">Score: ${score}/10</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${score*10}%; background:${color}"></div></div>
+          </div>
+          <div style="margin-top:10px; font-size:12px; color:#94a3b8;">💡 ${tip}</div>
+        </div>
+      </div>`;
+    chat.appendChild(msg);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  async function newQuestion() {
+    document.getElementById('answer-input').value = '';
+    document.getElementById('answer-input').disabled = false;
+    document.getElementById('submit-btn').disabled = false;
+    document.getElementById('hint-btn').disabled = false;
+
+    const res = await fetch('/api/question/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: currentCategory })
+    });
+    const data = await res.json();
+    currentHint = data.hint;
+    const hintId = 'hint-box';
+    addMessage(`<strong>Question:</strong> ${data.question}`, 'bot', data.hint);
+    const hb = document.getElementById(hintId);
+    if (hb) window._hintBox = hb;
+  }
+
+  function showHint() {
+    const hb = document.getElementById('hint-box');
+    if (hb) hb.classList.toggle('show');
+  }
+
+  async function submitAnswer() {
+    const input = document.getElementById('answer-input');
+    const answer = input.value.trim();
+    if (!answer) { alert('Please type your answer first!'); return; }
+
+    addMessage(answer, 'user');
+    input.value = '';
+
+    const res = await fetch('/api/answer/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answer })
+    });
+    const data = await res.json();
+
+    questionsAnswered++;
+    totalScore += data.score;
+    streak = data.score >= 5 ? streak + 1 : 0;
+
+    document.getElementById('q-count').textContent = questionsAnswered;
+    document.getElementById('avg-score').textContent = (totalScore / questionsAnswered).toFixed(1);
+    document.getElementById('streak').textContent = streak;
+
+    addFeedback(data.feedback, data.score, data.tip);
+  }
+
+  function clearChat() {
+    const chat = document.getElementById('chat');
+    chat.innerHTML = '<div class="empty-state"><div class="big">💬</div>Click <strong>New Question</strong> to start practising!</div>';
+    document.getElementById('answer-input').disabled = true;
+    document.getElementById('submit-btn').disabled = true;
+    document.getElementById('hint-btn').disabled = true;
+  }
+
+  // Enter key to submit
+  document.getElementById('answer-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.ctrlKey) submitAnswer();
+  });
+</script>
+</body>
+</html>
